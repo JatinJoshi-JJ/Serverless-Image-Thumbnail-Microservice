@@ -1,0 +1,43 @@
+/* Hide scrollbars globally while preserving smooth scroll functionality */
+html,
+body,
+* {
+  -ms-overflow-style: none !important;
+  scrollbar-width: none !important;
+}
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+*::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+/* Smooth tactile hover elevations for cards and interactive controls */
+section .rounded-2xl {
+  transition:
+    transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.28s ease;
+}
+section .rounded-2xl:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 14px 30px -10px rgba(14, 165, 233, 0.16);
+}
+button,
+a[class*="rounded-xl"],
+a[class*="rounded-lg"] {
+  transition:
+    transform 0.2s cubic-bezier(0.22, 1, 0.36, 1),
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+button:hover:not(:disabled),
+a[class*="rounded-xl"]:hover {
+  transform: translateY(-1.5px);
+}
+button:active:not(:disabled),
+a[class*="rounded-xl"]:active {
+  transform: translateY(0) scale(0.98);
+}

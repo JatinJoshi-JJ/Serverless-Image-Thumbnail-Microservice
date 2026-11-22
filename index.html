@@ -1,0 +1,919 @@
+<!doctype html>
+<html lang="en" class="dark">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SnapScale FaaS | Serverless Image Thumbnail Microservice</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ["Inter", "system-ui", "-apple-system", "sans-serif"],
+                        mono: ["ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
+                    },
+                },
+            },
+        };
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
+        rel="stylesheet" />
+    <link rel="stylesheet" href="https://unpkg.com/lenis@1.1.20/dist/lenis.css" />
+    <script src="https://unpkg.com/lenis@1.1.20/dist/lenis.min.js"></script>
+    <link rel="stylesheet" href="style.css" />
+</head>
+
+<body
+    class="bg-slate-50 text-slate-900 dark:bg-[#070b14] dark:text-slate-100 transition-colors duration-300 antialiased selection:bg-sky-500/30">
+    <!-- Preloader -->
+    <div id="preloader"
+        class="fixed inset-0 z-50 flex flex-col items-center justify-center bg-[#070b14] text-slate-100 transition-opacity duration-300">
+        <div class="relative flex items-center justify-center w-14 h-14 mb-4">
+            <div class="absolute inset-0 rounded-full border-4 border-sky-500/20"></div>
+            <div class="absolute inset-0 rounded-full border-4 border-t-sky-400 animate-spin"></div>
+            <span class="w-3 h-3 rounded-full bg-emerald-400 animate-pulse"></span>
+        </div>
+        <p class="text-xs font-mono tracking-widest uppercase text-sky-400">
+            Initializing Edge FaaS Runtime...
+        </p>
+    </div>
+
+    <!-- Sticky Responsive Navbar -->
+    <header
+        class="sticky top-0 z-40 border-b border-slate-200/80 dark:border-slate-800/80 bg-white/85 dark:bg-[#0b1120]/85 backdrop-blur-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+            <a href="#top" class="flex items-center gap-2.5 font-extrabold text-lg sm:text-xl tracking-tight">
+                <span class="w-3 h-3 rounded-full bg-emerald-400 shadow-[0_0_10px_#34d399]"></span>
+                <span>SnapScale<span class="text-sky-500">FaaS</span></span>
+            </a>
+
+            <!-- Desktop Nav Links -->
+            <nav class="hidden lg:flex items-center gap-6 text-sm font-medium text-slate-600 dark:text-slate-300">
+                <a href="#features" class="hover:text-sky-500 transition">Features</a>
+                <a href="#pipeline" class="hover:text-sky-500 transition">Architecture</a>
+                <a href="#sandbox" class="text-sky-500 font-semibold">Live Sandbox</a>
+                <a href="#formats" class="hover:text-sky-500 transition">Codecs</a>
+                <a href="#docs" class="hover:text-sky-500 transition">API Docs</a>
+                <a href="#benchmarks" class="hover:text-sky-500 transition">Benchmarks</a>
+                <a href="#faq" class="hover:text-sky-500 transition">FAQ</a>
+            </nav>
+
+            <!-- Right Controls -->
+            <div class="flex items-center gap-2.5">
+                <span
+                    class="hidden sm:inline-flex items-center px-3 py-1 rounded-full text-xs font-mono font-semibold bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20">
+                    POST /api/thumbnail
+                </span>
+                <button id="themeToggle" type="button" aria-label="Toggle Dark/Light Theme"
+                    class="p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800/70 hover:border-sky-500 transition text-sm">
+                    <span id="themeIcon">☀️</span>
+                </button>
+                <a href="#sandbox"
+                    class="hidden sm:inline-flex px-4 py-2 rounded-xl text-xs font-bold bg-sky-500 hover:bg-sky-400 text-slate-950 transition shadow-sm">
+                    Test Endpoint
+                </a>
+                <button id="mobileMenuBtn" type="button" aria-label="Open Navigation Menu"
+                    class="lg:hidden p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800/70">
+                    ☰
+                </button>
+            </div>
+        </div>
+
+        <!-- Mobile Dropdown Menu -->
+        <div id="mobileMenu"
+            class="hidden lg:hidden border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0b1120] px-4 py-4 space-y-2 text-sm font-medium">
+            <a href="#features"
+                class="block py-2 px-3 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800">Features</a>
+            <a href="#pipeline"
+                class="block py-2 px-3 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800">Architecture Pipeline</a>
+            <a href="#sandbox" class="block py-2 px-3 rounded-lg bg-sky-500/10 text-sky-500 font-semibold">Live API
+                Sandbox</a>
+            <a href="#formats" class="block py-2 px-3 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800">Supported
+                Codecs</a>
+            <a href="#docs" class="block py-2 px-3 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800">API
+                Documentation</a>
+            <a href="#benchmarks"
+                class="block py-2 px-3 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800">Performance Benchmarks</a>
+            <a href="#faq" class="block py-2 px-3 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800">FAQ</a>
+        </div>
+    </header>
+
+    <main id="top">
+        <!-- SECTION 1: Hero & Edge Telemetry -->
+        <section class="relative overflow-hidden py-16 sm:py-24 border-b border-slate-200/80 dark:border-slate-800/80">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+                <div
+                    class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 mb-6">
+                    <span>⚡ Node.js + Sharp • Zero-Idle FaaS Architecture • CORS
+                        Ready</span>
+                </div>
+                <h1
+                    class="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight max-w-4xl mx-auto leading-tight mb-6">
+                    Serverless Image
+                    <span class="text-transparent bg-clip-text bg-gradient-to-r from-sky-400 to-emerald-400">Thumbnail
+                        Microservice</span>
+                    at Edge Speed
+                </h1>
+                <p class="text-base sm:text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto mb-8">
+                    Extract image dimensions, validate binary headers, and generate
+                    ultra-compressed WebP, JPEG, and PNG thumbnails on demand via a
+                    stateless HTTP endpoint.
+                </p>
+                <div class="flex flex-wrap items-center justify-center gap-3.5 mb-14">
+                    <a href="#sandbox"
+                        class="px-6 py-3.5 rounded-xl font-bold text-sm bg-sky-500 hover:bg-sky-400 text-slate-950 shadow-lg shadow-sky-500/20 transition">
+                        ⚡ Launch Interactive Sandbox
+                    </a>
+                    <a href="#docs"
+                        class="px-6 py-3.5 rounded-xl font-bold text-sm border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 hover:border-sky-500 transition">
+                        Read API Spec
+                    </a>
+                </div>
+
+                <!-- Telemetry Strip -->
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 max-w-5xl mx-auto">
+                    <div
+                        class="p-5 rounded-2xl bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 shadow-sm">
+                        <div class="text-2xl sm:text-3xl font-black text-sky-500">
+                            &lt; 45 ms
+                        </div>
+                        <div class="text-xs font-medium text-slate-500 dark:text-slate-400 mt-1">
+                            Warm Sharp Resize Latency
+                        </div>
+                    </div>
+                    <div
+                        class="p-5 rounded-2xl bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 shadow-sm">
+                        <div class="text-2xl sm:text-3xl font-black text-emerald-500">
+                            Up to 82%
+                        </div>
+                        <div class="text-xs font-medium text-slate-500 dark:text-slate-400 mt-1">
+                            WebP Payload Reduction
+                        </div>
+                    </div>
+                    <div
+                        class="p-5 rounded-2xl bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 shadow-sm">
+                        <div class="text-2xl sm:text-3xl font-black text-purple-500">
+                            HTTP 400
+                        </div>
+                        <div class="text-xs font-medium text-slate-500 dark:text-slate-400 mt-1">
+                            Strict MIME &amp; Header Validation
+                        </div>
+                    </div>
+                    <div
+                        class="p-5 rounded-2xl bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 shadow-sm">
+                        <div class="text-2xl sm:text-3xl font-black text-amber-500">
+                            $0.00 / mo
+                        </div>
+                        <div class="text-xs font-medium text-slate-500 dark:text-slate-400 mt-1">
+                            100% Free-Tier Serverless
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 2: Core Microservice Capabilities -->
+        <section id="features" class="py-16 sm:py-20 border-b border-slate-200/80 dark:border-slate-800/80">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="text-center max-w-2xl mx-auto mb-12">
+                    <span class="text-xs font-bold uppercase tracking-wider text-sky-500">Core Capabilities</span>
+                    <h2 class="text-2xl sm:text-4xl font-extrabold mt-2 mb-3">
+                        Engineered for Production Cloud Workloads
+                    </h2>
+                    <p class="text-sm sm:text-base text-slate-600 dark:text-slate-400">
+                        Built to eliminate always-on media servers while preserving strict
+                        input sanitization and cross-origin compatibility.
+                    </p>
+                </div>
+
+                <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div
+                        class="p-6 rounded-2xl bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 hover:border-sky-500/50 transition">
+                        <div
+                            class="w-10 h-10 rounded-xl bg-sky-500/10 text-sky-500 flex items-center justify-center text-lg font-bold mb-4">
+                            🔗
+                        </div>
+                        <h3 class="font-bold text-lg mb-2">
+                            Dual URL &amp; Base64 Ingestion
+                        </h3>
+                        <p class="text-sm text-slate-600 dark:text-slate-400">
+                            Accepts remote HTTP/HTTPS image URLs as well as raw or Data-URI
+                            Base64 payloads seamlessly in a unified JSON schema.
+                        </p>
+                    </div>
+                    <div
+                        class="p-6 rounded-2xl bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 hover:border-sky-500/50 transition">
+                        <div
+                            class="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center text-lg font-bold mb-4">
+                            📐
+                        </div>
+                        <h3 class="font-bold text-lg mb-2">
+                            Automated Metadata Extraction
+                        </h3>
+                        <p class="text-sm text-slate-600 dark:text-slate-400">
+                            Inspects binary image headers before transcoding to report exact
+                            original width, height, color format, and byte footprint.
+                        </p>
+                    </div>
+                    <div
+                        class="p-6 rounded-2xl bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 hover:border-sky-500/50 transition">
+                        <div
+                            class="w-10 h-10 rounded-xl bg-purple-500/10 text-purple-500 flex items-center justify-center text-lg font-bold mb-4">
+                            🛡️
+                        </div>
+                        <h3 class="font-bold text-lg mb-2">400 Bad Request Guardrails</h3>
+                        <p class="text-sm text-slate-600 dark:text-slate-400">
+                            Rejects non-image payloads, malformed JSON, and out-of-range
+                            dimensions immediately with structured HTTP 400 diagnostics.
+                        </p>
+                    </div>
+                    <div
+                        class="p-6 rounded-2xl bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 hover:border-sky-500/50 transition">
+                        <div
+                            class="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center text-lg font-bold mb-4">
+                            🌐
+                        </div>
+                        <h3 class="font-bold text-lg mb-2">Pre-Configured Edge CORS</h3>
+                        <p class="text-sm text-slate-600 dark:text-slate-400">
+                            Handles <code class="text-sky-500">OPTIONS</code> preflight
+                            requests and injects permissive
+                            <code class="text-sky-500">Access-Control-Allow-Origin</code>
+                            headers for frontend apps.
+                        </p>
+                    </div>
+                    <div
+                        class="p-6 rounded-2xl bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 hover:border-sky-500/50 transition">
+                        <div
+                            class="w-10 h-10 rounded-xl bg-rose-500/10 text-rose-500 flex items-center justify-center text-lg font-bold mb-4">
+                            ❄️
+                        </div>
+                        <h3 class="font-bold text-lg mb-2">Cold-Start Optimization</h3>
+                        <p class="text-sm text-slate-600 dark:text-slate-400">
+                            Bundled via esbuild with external native
+                            <code class="text-sky-500">libvips</code> bindings so cold
+                            invocations execute well within serverless timeouts.
+                        </p>
+                    </div>
+                    <div
+                        class="p-6 rounded-2xl bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 hover:border-sky-500/50 transition">
+                        <div
+                            class="w-10 h-10 rounded-xl bg-cyan-500/10 text-cyan-500 flex items-center justify-center text-lg font-bold mb-4">
+                            ✨
+                        </div>
+                        <h3 class="font-bold text-lg mb-2">
+                            Gemini Multimodal Inspector
+                        </h3>
+                        <p class="text-sm text-slate-600 dark:text-slate-400">
+                            Optionally analyze generated thumbnails with Gemini Vision to
+                            auto-generate SEO alt-text and smart-crop focal coordinates.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 3: 4-Stage Serverless Execution Pipeline -->
+        <section id="pipeline"
+            class="py-16 sm:py-20 bg-slate-100/70 dark:bg-[#090e1a] border-b border-slate-200/80 dark:border-slate-800/80">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="text-center max-w-2xl mx-auto mb-12">
+                    <span class="text-xs font-bold uppercase tracking-wider text-emerald-500">Request Lifecycle</span>
+                    <h2 class="text-2xl sm:text-4xl font-extrabold mt-2 mb-3">
+                        4-Stage Serverless Execution Pipeline
+                    </h2>
+                    <p class="text-sm sm:text-base text-slate-600 dark:text-slate-400">
+                        Every HTTP invocation passes through deterministic validation,
+                        memory-stream decoding, and compression stages.
+                    </p>
+                </div>
+
+                <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
+                    <div
+                        class="p-6 rounded-2xl bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 relative">
+                        <span
+                            class="inline-block px-2.5 py-1 rounded-lg text-xs font-mono font-bold bg-sky-500/10 text-sky-500 mb-3">STAGE
+                            01</span>
+                        <h3 class="font-bold text-base mb-2">Edge Gateway &amp; CORS</h3>
+                        <p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                            Netlify Edge routes
+                            <code class="text-sky-500">/api/thumbnail</code> to the isolated
+                            function container and resolves CORS preflight headers.
+                        </p>
+                    </div>
+                    <div
+                        class="p-6 rounded-2xl bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800">
+                        <span
+                            class="inline-block px-2.5 py-1 rounded-lg text-xs font-mono font-bold bg-purple-500/10 text-purple-500 mb-3">STAGE
+                            02</span>
+                        <h3 class="font-bold text-base mb-2">Buffer &amp; MIME Gate</h3>
+                        <p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                            Fetches remote image stream or decodes Base64 into a Node.js
+                            <code class="text-sky-500">Buffer</code>, rejecting non-image
+                            payloads with HTTP 400.
+                        </p>
+                    </div>
+                    <div
+                        class="p-6 rounded-2xl bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800">
+                        <span
+                            class="inline-block px-2.5 py-1 rounded-lg text-xs font-mono font-bold bg-amber-500/10 text-amber-500 mb-3">STAGE
+                            03</span>
+                        <h3 class="font-bold text-base mb-2">Sharp / libvips Resize</h3>
+                        <p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                            Extracts source dimensions and performs center-cropped
+                            resampling into WebP, JPEG, or PNG at 80% perceptual quality.
+                        </p>
+                    </div>
+                    <div
+                        class="p-6 rounded-2xl bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800">
+                        <span
+                            class="inline-block px-2.5 py-1 rounded-lg text-xs font-mono font-bold bg-emerald-500/10 text-emerald-500 mb-3">STAGE
+                            04</span>
+                        <h3 class="font-bold text-base mb-2">
+                            JSON &amp; Data URI Response
+                        </h3>
+                        <p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                            Returns structured telemetry, compression ratio savings,
+                            execution time in ms, and ready-to-render Data URI.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 4: Interactive Live API Sandbox (with Gemini AI Features) -->
+        <section id="sandbox" class="py-16 sm:py-20 border-b border-slate-200/80 dark:border-slate-800/80">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex flex-wrap items-end justify-between gap-4 mb-10">
+                    <div>
+                        <span class="text-xs font-bold uppercase tracking-wider text-sky-500">Interactive Console</span>
+                        <h2 class="text-2xl sm:text-4xl font-extrabold mt-1">
+                            Live Serverless API Sandbox
+                        </h2>
+                        <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-1.5">
+                            Test live HTTP requests, inspect extracted metadata, and run
+                            Gemini Vision diagnostics in real time.
+                        </p>
+                    </div>
+                    <span
+                        class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-mono bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                        Auto-fallback browser engine active
+                    </span>
+                </div>
+
+                <div class="grid lg:grid-cols-12 gap-6 items-stretch">
+                    <!-- Left: Request Builder (5 cols) -->
+                    <div
+                        class="lg:col-span-5 flex flex-col justify-between p-6 sm:p-7 rounded-2xl bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 shadow-sm">
+                        <div>
+                            <div
+                                class="flex items-center justify-between pb-3.5 mb-5 border-b border-slate-200/80 dark:border-slate-800">
+                                <h3 class="font-bold text-base text-sky-500">
+                                    1. Configure HTTP Payload
+                                </h3>
+                                <span
+                                    class="text-[11px] font-mono px-2 py-0.5 rounded bg-sky-500/10 text-sky-500 font-semibold">JSON
+                                    / REST</span>
+                            </div>
+
+                            <!-- Mode Tabs -->
+                            <div
+                                class="grid grid-cols-2 gap-2 p-1 rounded-xl bg-slate-100 dark:bg-slate-900 mb-5 border border-slate-200/70 dark:border-slate-800">
+                                <button type="button"
+                                    class="tab active py-2 rounded-lg text-xs font-bold bg-white dark:bg-slate-800 text-sky-500 shadow-sm transition"
+                                    data-mode="url">
+                                    Image URL
+                                </button>
+                                <button type="button"
+                                    class="tab py-2 rounded-lg text-xs font-bold text-slate-500 dark:text-slate-400 transition"
+                                    data-mode="file">
+                                    Upload File (Base64)
+                                </button>
+                            </div>
+
+                            <!-- URL Input -->
+                            <div id="urlGroup" class="mb-5">
+                                <label for="imageUrl" class="block text-xs font-semibold mb-1.5">Public Image
+                                    URL</label>
+                                <input type="url" id="imageUrl"
+                                    value="https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=1000"
+                                    class="w-full px-3.5 py-2.5 rounded-xl text-xs border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 focus:outline-none focus:border-sky-500" />
+                            </div>
+
+                            <!-- File Input + Gemini Image Generator -->
+                            <div id="fileGroup" class="mb-5 hidden">
+                                <label for="imageFile" class="block text-xs font-semibold mb-1.5">Select Local Image
+                                    (Converts to Base64)</label>
+                                <input type="file" id="imageFile" accept="image/*"
+                                    class="w-full px-3 py-2 rounded-xl text-xs border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900" />
+                                <div class="mt-3 pt-3 border-t border-slate-200 dark:border-slate-800">
+                                    <label for="aiGenPrompt"
+                                        class="block text-[11px] font-bold text-indigo-600 dark:text-indigo-400 mb-1.5">✨
+                                        Or Generate Synthetic Test Image with Gemini</label>
+                                    <div class="flex gap-2">
+                                        <input type="text" id="aiGenPrompt"
+                                            placeholder="e.g., Futuristic cloud server rack neon lights"
+                                            class="flex-1 px-3 py-2 rounded-lg text-xs border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 focus:outline-none focus:border-indigo-500" />
+                                        <button type="button" id="aiGenBtn"
+                                            class="px-3.5 py-2 rounded-lg text-xs font-bold bg-indigo-600 hover:bg-indigo-500 text-white transition whitespace-nowrap">
+                                            ✨ Generate
+                                        </button>
+                                    </div>
+                                    <p id="aiGenStatus"
+                                        class="text-[11px] text-slate-500 dark:text-slate-400 mt-1.5 hidden"></p>
+                                </div>
+                            </div>
+
+                            <!-- Dimensions & Format -->
+                            <div class="grid grid-cols-3 gap-3 mb-5">
+                                <div>
+                                    <label for="thumbWidth" class="block text-xs font-semibold mb-1.5">Width
+                                        (px)</label>
+                                    <input type="number" id="thumbWidth" value="240" min="16" max="1024"
+                                        class="w-full px-3 py-2.5 rounded-xl text-xs font-semibold border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900" />
+                                </div>
+                                <div>
+                                    <label for="thumbHeight" class="block text-xs font-semibold mb-1.5">Height
+                                        (px)</label>
+                                    <input type="number" id="thumbHeight" value="240" min="16" max="1024"
+                                        class="w-full px-3 py-2.5 rounded-xl text-xs font-semibold border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900" />
+                                </div>
+                                <div>
+                                    <label for="thumbFormat" class="block text-xs font-semibold mb-1.5">Format</label>
+                                    <select id="thumbFormat"
+                                        class="w-full px-3 py-2.5 rounded-xl text-xs font-semibold border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900">
+                                        <option value="webp" selected>WebP</option>
+                                        <option value="jpeg">JPEG</option>
+                                        <option value="png">PNG</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Action Buttons -->
+                            <div class="grid sm:grid-cols-5 gap-2.5 mb-5">
+                                <button type="button" id="invokeBtn"
+                                    class="sm:col-span-3 py-3 px-4 rounded-xl text-xs font-extrabold bg-sky-500 hover:bg-sky-400 text-slate-950 transition shadow-sm">
+                                    ⚡ Invoke Function
+                                </button>
+                                <button type="button" id="testBadBtn"
+                                    class="sm:col-span-2 py-3 px-3 rounded-xl text-xs font-bold bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 border border-rose-500/30 transition">
+                                    Test HTTP 400
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Live cURL Snippet -->
+                        <div class="rounded-xl bg-slate-950 border border-slate-800 p-4">
+                            <div class="flex items-center justify-between text-[11px] text-slate-400 mb-2">
+                                <span class="font-mono">cURL Invocation</span>
+                                <button type="button" id="copyCurlBtn"
+                                    class="px-2.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 transition">
+                                    Copy
+                                </button>
+                            </div>
+                            <pre id="curlPreview"
+                                class="text-[11px] font-mono text-sky-300 overflow-x-auto whitespace-pre-wrap break-all leading-relaxed"></pre>
+                        </div>
+                    </div>
+
+                    <!-- Right: Response, Thumbnail Preview & Gemini Vision Inspector (7 cols) -->
+                    <div
+                        class="lg:col-span-7 flex flex-col justify-between p-6 sm:p-7 rounded-2xl bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 shadow-sm">
+                        <div>
+                            <div
+                                class="flex items-center justify-between gap-2 pb-3.5 mb-5 border-b border-slate-200/80 dark:border-slate-800">
+                                <h3 class="font-bold text-base text-sky-500">
+                                    2. Response Metadata &amp; Thumbnail Stream
+                                </h3>
+                                <span id="statusBadge"
+                                    class="px-3 py-1 rounded-full text-xs font-mono font-bold bg-slate-100 dark:bg-slate-800 text-slate-500">Ready</span>
+                            </div>
+
+                            <!-- Generated Thumbnail Preview Box -->
+                            <div id="previewArea"
+                                class="hidden grid sm:grid-cols-12 gap-4 p-4 rounded-xl bg-slate-50 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 mb-5 items-center">
+                                <div class="sm:col-span-4 flex flex-col items-center gap-2.5">
+                                    <img id="thumbImg" alt="Generated Thumbnail Preview"
+                                        class="w-32 h-32 object-cover rounded-xl border border-slate-300 dark:border-slate-700 shadow" />
+                                    <a id="downloadThumb" download="thumbnail.webp"
+                                        class="inline-flex items-center gap-1 px-3 py-1 rounded-lg bg-sky-500/10 text-xs font-bold text-sky-500 hover:bg-sky-500/20 transition">⬇
+                                        Download</a>
+                                </div>
+                                <div id="metricsGrid" class="sm:col-span-8 grid grid-cols-2 gap-2.5 text-xs"></div>
+                            </div>
+
+                            <!-- Gemini Vision AI Inspector Panel -->
+                            <div id="geminiVisionPanel"
+                                class="hidden mb-5 p-4 rounded-xl bg-gradient-to-br from-indigo-500/10 via-sky-500/10 to-purple-500/10 border border-indigo-500/30">
+                                <div class="flex flex-wrap items-center justify-between gap-2 mb-2.5">
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-sm">✨</span>
+                                        <span
+                                            class="text-xs font-extrabold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">Gemini
+                                            Vision Edge Inspector</span>
+                                    </div>
+                                    <button type="button" id="analyzeWithGeminiBtn"
+                                        class="px-3 py-1.5 rounded-lg text-xs font-bold bg-indigo-600 hover:bg-indigo-500 text-white transition shadow-sm flex items-center gap-1.5">
+                                        <span>✨ Generate Alt-Text &amp; Smart Crop Insights</span>
+                                    </button>
+                                </div>
+                                <div id="geminiVisionOutput"
+                                    class="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
+                                    Click the button above to inspect the generated thumbnail
+                                    with Gemini Multimodal AI for accessibility alt-text,
+                                    dominant subjects, and smart-crop recommendations.
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- JSON Payload Output -->
+                        <div class="rounded-xl bg-slate-950 border border-slate-800 p-4 flex-1 flex flex-col">
+                            <div class="flex items-center justify-between text-[11px] text-slate-400 mb-2">
+                                <span class="font-mono">HTTP JSON Response Body</span>
+                                <span class="text-emerald-400 font-mono">application/json</span>
+                            </div>
+                            <pre id="jsonOutput" data-lenis-prevent
+                                class="text-xs font-mono text-slate-200 overflow-x-auto overflow-y-auto flex-1 min-h-[13rem] max-h-80 whitespace-pre-wrap break-all leading-relaxed cursor-text focus:outline-none">
+{
+  "service": "SnapScale Serverless Image Thumbnail Microservice",
+  "endpoint": "/api/thumbnail",
+  "hint": "Click 'Invoke Function' to extract metadata and generate a thumbnail."
+}</pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 5: Supported Output Codecs -->
+        <section id="formats"
+            class="py-16 sm:py-20 bg-slate-100/70 dark:bg-[#090e1a] border-b border-slate-200/80 dark:border-slate-800/80">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="text-center max-w-2xl mx-auto mb-12">
+                    <span class="text-xs font-bold uppercase tracking-wider text-purple-500">Codec Matrix</span>
+                    <h2 class="text-2xl sm:text-4xl font-extrabold mt-2 mb-3">
+                        Adaptive Thumbnail Output Formats
+                    </h2>
+                    <p class="text-sm sm:text-base text-slate-600 dark:text-slate-400">
+                        Choose the optimal compression encoder based on target client
+                        bandwidth and alpha-channel transparency needs.
+                    </p>
+                </div>
+
+                <div class="grid md:grid-cols-3 gap-6">
+                    <div class="p-6 rounded-2xl bg-white dark:bg-[#0f172a] border-2 border-sky-500/40 relative">
+                        <span
+                            class="absolute top-4 right-4 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-sky-500/15 text-sky-500">RECOMMENDED</span>
+                        <h3 class="text-xl font-extrabold mb-1">WebP (VP8/VP8L)</h3>
+                        <p class="text-xs font-mono text-slate-500 mb-4">
+                            MIME: image/webp • Quality: 80
+                        </p>
+                        <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
+                            Delivers 25–35% smaller file sizes than JPEG at equivalent SSIM
+                            quality while preserving full alpha transparency.
+                        </p>
+                        <div class="text-xs font-semibold text-emerald-500">
+                            ✓ Best for modern web &amp; mobile feeds
+                        </div>
+                    </div>
+                    <div
+                        class="p-6 rounded-2xl bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800">
+                        <h3 class="text-xl font-extrabold mb-1">Progressive JPEG</h3>
+                        <p class="text-xs font-mono text-slate-500 mb-4">
+                            MIME: image/jpeg • Quality: 80
+                        </p>
+                        <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
+                            Universal legacy compatibility across email clients, OpenGraph
+                            social cards, and embedded IoT displays.
+                        </p>
+                        <div class="text-xs font-semibold text-sky-500">
+                            ✓ Fastest hardware decode speed
+                        </div>
+                    </div>
+                    <div
+                        class="p-6 rounded-2xl bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800">
+                        <h3 class="text-xl font-extrabold mb-1">Lossless PNG</h3>
+                        <p class="text-xs font-mono text-slate-500 mb-4">
+                            MIME: image/png • Deflate
+                        </p>
+                        <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
+                            Ideal for UI icons, architectural diagrams, logos, and crisp
+                            typography where zero compression artifacts are allowed.
+                        </p>
+                        <div class="text-xs font-semibold text-purple-500">
+                            ✓ Pixel-exact alpha channel preservation
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 6: REST API Reference -->
+        <section id="docs" class="py-16 sm:py-20 border-b border-slate-200/80 dark:border-slate-800/80">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="mb-10">
+                    <span class="text-xs font-bold uppercase tracking-wider text-sky-500">Developer Documentation</span>
+                    <h2 class="text-2xl sm:text-4xl font-extrabold mt-1 mb-2">
+                        REST Endpoint &amp; Status Codes
+                    </h2>
+                    <p class="text-sm text-slate-600 dark:text-slate-400">
+                        Standardized HTTP interface supporting both
+                        <code class="text-sky-500">POST</code> JSON bodies and
+                        <code class="text-sky-500">GET</code> query strings.
+                    </p>
+                </div>
+
+                <div
+                    class="overflow-x-auto rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0f172a]">
+                    <table class="w-full text-left border-collapse text-sm">
+                        <thead>
+                            <tr
+                                class="border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/70 text-xs uppercase text-slate-500">
+                                <th class="py-3.5 px-5">Parameter</th>
+                                <th class="py-3.5 px-5">Type</th>
+                                <th class="py-3.5 px-5">Default</th>
+                                <th class="py-3.5 px-5">Description</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-200 dark:divide-slate-800 text-xs sm:text-sm">
+                            <tr>
+                                <td class="py-3.5 px-5 font-mono font-bold text-sky-500">
+                                    imageUrl
+                                </td>
+                                <td class="py-3.5 px-5 font-mono">string</td>
+                                <td class="py-3.5 px-5 text-slate-500">required*</td>
+                                <td class="py-3.5 px-5 text-slate-600 dark:text-slate-400">
+                                    Public HTTP/HTTPS URL of source image (required if
+                                    <code class="text-sky-500">imageBase64</code> is omitted).
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="py-3.5 px-5 font-mono font-bold text-sky-500">
+                                    imageBase64
+                                </td>
+                                <td class="py-3.5 px-5 font-mono">string</td>
+                                <td class="py-3.5 px-5 text-slate-500">required*</td>
+                                <td class="py-3.5 px-5 text-slate-600 dark:text-slate-400">
+                                    Raw Base64 string or
+                                    <code class="text-sky-500">data:image/...;base64,...</code>
+                                    URI.
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="py-3.5 px-5 font-mono font-bold text-sky-500">
+                                    width / height
+                                </td>
+                                <td class="py-3.5 px-5 font-mono">integer</td>
+                                <td class="py-3.5 px-5 font-mono">200</td>
+                                <td class="py-3.5 px-5 text-slate-600 dark:text-slate-400">
+                                    Target thumbnail bounding box clamped between
+                                    <code class="text-sky-500">16px</code> and
+                                    <code class="text-sky-500">1024px</code>.
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="py-3.5 px-5 font-mono font-bold text-sky-500">
+                                    format
+                                </td>
+                                <td class="py-3.5 px-5 font-mono">enum</td>
+                                <td class="py-3.5 px-5 font-mono">"webp"</td>
+                                <td class="py-3.5 px-5 text-slate-600 dark:text-slate-400">
+                                    Output codec: <code class="text-sky-500">webp</code>,
+                                    <code class="text-sky-500">jpeg</code>, or
+                                    <code class="text-sky-500">png</code>. Invalid values return
+                                    <code class="text-rose-500">400</code>.
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 7: Serverless Cold-Start & FaaS Benchmarks -->
+        <section id="benchmarks"
+            class="py-16 sm:py-20 bg-slate-100/70 dark:bg-[#090e1a] border-b border-slate-200/80 dark:border-slate-800/80">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="grid lg:grid-cols-2 gap-10 items-center">
+                    <div>
+                        <span class="text-xs font-bold uppercase tracking-wider text-emerald-500">Runtime
+                            Telemetry</span>
+                        <h2 class="text-2xl sm:text-4xl font-extrabold mt-2 mb-4">
+                            Cold-Start &amp; Memory Efficiency
+                        </h2>
+                        <p class="text-sm sm:text-base text-slate-600 dark:text-slate-400 mb-6">
+                            Traditional VM image workers sit idle 90% of the day while
+                            burning fixed monthly compute fees. SnapScale scales to zero
+                            automatically and leverages native C++
+                            <code class="text-sky-500">libvips</code> streams for sub-50ms
+                            warm execution.
+                        </p>
+                        <ul class="space-y-3 text-sm">
+                            <li class="flex items-center gap-2.5">
+                                <span class="text-emerald-500 font-bold">✓</span>
+                                <strong>125,000 free invocations/month</strong> on Netlify
+                                Functions free tier
+                            </li>
+                            <li class="flex items-center gap-2.5">
+                                <span class="text-emerald-500 font-bold">✓</span>
+                                <strong>Zero disk I/O</strong> — entire decode &amp; resize
+                                happens in RAM buffers
+                            </li>
+                            <li class="flex items-center gap-2.5">
+                                <span class="text-emerald-500 font-bold">✓</span>
+                                <strong>Automatic scale-to-zero</strong> with zero idle
+                                infrastructure cost
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div
+                        class="p-6 rounded-2xl bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 space-y-5">
+                        <div>
+                            <div class="flex justify-between text-xs font-bold mb-1.5">
+                                <span>Warm FaaS Execution (Sharp + libvips)</span>
+                                <span class="text-emerald-500">38 ms</span>
+                            </div>
+                            <div class="w-full h-3 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
+                                <div class="h-full bg-emerald-500 rounded-full" style="width: 18%"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-xs font-bold mb-1.5">
+                                <span>Cold Start Initialization (esbuild bundle)</span>
+                                <span class="text-sky-500">210 ms</span>
+                            </div>
+                            <div class="w-full h-3 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
+                                <div class="h-full bg-sky-500 rounded-full" style="width: 45%"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-xs font-bold mb-1.5">
+                                <span>Pure-JS Image Decoder (Legacy Baseline)</span>
+                                <span class="text-amber-500">680 ms</span>
+                            </div>
+                            <div class="w-full h-3 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
+                                <div class="h-full bg-amber-500 rounded-full" style="width: 88%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 8: FAQ -->
+        <section id="faq" class="py-16 sm:py-20">
+            <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="text-center mb-10">
+                    <span class="text-xs font-bold uppercase tracking-wider text-sky-500">FAQ</span>
+                    <h2 class="text-2xl sm:text-3xl font-extrabold mt-2">
+                        Frequently Asked Questions
+                    </h2>
+                </div>
+
+                <div class="space-y-4">
+                    <details
+                        class="group p-5 rounded-2xl bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800"
+                        open>
+                        <summary
+                            class="font-bold text-sm sm:text-base cursor-pointer list-none flex justify-between items-center">
+                            <span>How does the microservice validate non-image payloads?</span>
+                            <span class="text-sky-500 group-open:rotate-45 transition">+</span>
+                        </summary>
+                        <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-3 leading-relaxed">
+                            Before resizing, the function checks remote HTTP
+                            <code class="text-sky-500">Content-Type</code> headers and runs
+                            <code class="text-sky-500">sharp(buffer).metadata()</code> to
+                            verify magic bytes. Plain text, HTML, or corrupted payloads
+                            immediately return an
+                            <code class="text-rose-500">HTTP 400 Bad Request</code> JSON
+                            error.
+                        </p>
+                    </details>
+
+                    <details
+                        class="group p-5 rounded-2xl bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800">
+                        <summary
+                            class="font-bold text-sm sm:text-base cursor-pointer list-none flex justify-between items-center">
+                            <span>Can frontend apps on another domain call
+                                /api/thumbnail?</span>
+                            <span class="text-sky-500 group-open:rotate-45 transition">+</span>
+                        </summary>
+                        <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-3 leading-relaxed">
+                            Yes. Every response includes
+                            <code class="text-sky-500">Access-Control-Allow-Origin: *</code>
+                            and responds to
+                            <code class="text-sky-500">OPTIONS</code> preflight requests
+                            with <code class="text-sky-500">204 No Content</code>.
+                        </p>
+                    </details>
+
+                    <details
+                        class="group p-5 rounded-2xl bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800">
+                        <summary
+                            class="font-bold text-sm sm:text-base cursor-pointer list-none flex justify-between items-center">
+                            <span>Why does the preview sandbox work even without a local Node
+                                server?</span>
+                            <span class="text-sky-500 group-open:rotate-45 transition">+</span>
+                        </summary>
+                        <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-3 leading-relaxed">
+                            When deployed on Netlify, requests hit the live Node.js + Sharp
+                            serverless function at
+                            <code class="text-sky-500">/api/thumbnail</code>. If opened
+                            standalone in an offline preview, the client gracefully falls
+                            back to an HTML5 Canvas encoder so you can test the exact same
+                            JSON contract anywhere.
+                        </p>
+                    </details>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Clean SaaS Footer -->
+    <footer class="border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0b1120]">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+            <div
+                class="grid sm:grid-cols-2 lg:grid-cols-4 gap-8 pb-10 border-b border-slate-200/80 dark:border-slate-800/80">
+                <!-- Brand Column -->
+                <div class="sm:col-span-2">
+                    <a href="#top"
+                        class="inline-flex items-center gap-2.5 font-extrabold text-slate-900 dark:text-slate-100 text-lg mb-3">
+                        <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-[0_0_8px_#34d399]"></span>
+                        <span>SnapScale<span class="text-sky-500">FaaS</span></span>
+                    </a>
+                    <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-400 max-w-md leading-relaxed mb-4">
+                        Stateless serverless image processing microservice built on
+                        Node.js, Sharp (<code class="text-sky-500">libvips</code>), and
+                        Gemini Multimodal AI for instant metadata extraction and edge
+                        thumbnail optimization.
+                    </p>
+                    <div
+                        class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-mono bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                        <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                        All Edge Nodes Operational
+                    </div>
+                </div>
+
+                <!-- Quick Navigation -->
+                <div>
+                    <h4 class="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-slate-200 mb-3.5">
+                        Platform
+                    </h4>
+                    <ul class="space-y-2.5 text-xs text-slate-600 dark:text-slate-400">
+                        <li>
+                            <a href="#features" class="hover:text-sky-500 transition">Core Capabilities</a>
+                        </li>
+                        <li>
+                            <a href="#pipeline" class="hover:text-sky-500 transition">4-Stage Pipeline</a>
+                        </li>
+                        <li>
+                            <a href="#sandbox" class="hover:text-sky-500 transition">Live API Sandbox</a>
+                        </li>
+                        <li>
+                            <a href="#formats" class="hover:text-sky-500 transition">Output Codecs</a>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Endpoint & Runtime Specs -->
+                <div>
+                    <h4 class="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-slate-200 mb-3.5">
+                        Runtime Specs
+                    </h4>
+                    <ul class="space-y-2.5 text-xs text-slate-600 dark:text-slate-400">
+                        <li>
+                            Endpoint: <code class="text-sky-500">/api/thumbnail</code>
+                        </li>
+                        <li>Engine: <code class="text-sky-500">Node.js + Sharp</code></li>
+                        <li>
+                            AI Vision: <code class="text-indigo-500">Gemini 3 Flash</code>
+                        </li>
+                        <li>
+                            <a href="#docs" class="hover:text-sky-500 transition">REST API Reference →</a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Bottom Bar -->
+            <div
+                class="pt-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500 dark:text-slate-400">
+                <p>© 2026 SnapScale FaaS • Serverless Media Optimization Engine</p>
+                <div class="flex items-center gap-4">
+                    <span>CORS Enabled (<code class="text-sky-500">*</code>)</span>
+                    <span>•</span>
+                    <span>Zero-Idle Edge Architecture</span>
+                </div>
+            </div>
+        </div>
+    </footer>
+    <script src="script.js"></script>
+</body>
+
+</html>
